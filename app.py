@@ -4,16 +4,37 @@ import numpy as np
 import xgboost as xgb
 import shap
 import joblib
-from streamlit_shap import st_shap
+import json
 import re
+from streamlit_shap import st_shap
+
+# --- BUG FIX: INTERCEPTOR FOR XGBOOST/SHAP ---
+# This patches the known compatibility bug between XGBoost 3.0+ and SHAP
+original_save_config = xgb.core.Booster.save_config
+
+def patched_save_config(self, *args, **kwargs):
+    config_str = original_save_config(self, *args, **kwargs)
+    config = json.loads(config_str)
+    
+    # Secretly remove the brackets before SHAP sees them
+    try:
+        bs = config["learner"]["learner_model_param"]["base_score"]
+        if isinstance(bs, str) and "[" in bs:
+            config["learner"]["learner_model_param"]["base_score"] = re.sub(r"[^\d\.E\-]", "", bs)
+    except KeyError:
+        pass
+        
+    return json.dumps(config)
+
+xgb.core.Booster.save_config = patched_save_config
+# ---------------------------------------------
 
 # --- 1. Page Configuration ---
-st.set_page_config(page_title="Bank Customer Churn Predictor", layout="wide")
+st.set_page_config(page_title="Bank Customer Churn Predictor V3", layout="wide")
 
 # --- 2. Asset Loading ---
 @st.cache_resource
 def load_model():
-    # Make sure this matches your actual saved model filename!
     return joblib.load('xgb_churn_model.pkl')
 
 model = load_model()
@@ -80,7 +101,7 @@ def user_input_features():
 input_df = user_input_features()
 
 # --- 4. Main UI Layout ---
-st.title("🏦 Bank Customer Churn Predictor v2")
+st.title("🏦 Bank Customer Churn Predictor V3")
 st.markdown("This tool utilizes an **Optimized XGBoost Classifier** and **SHAP (Explainable AI)** to identify churn risk and the underlying financial drivers.")
 st.divider()
 
@@ -92,8 +113,7 @@ with col1:
     # Predict Probability
     raw_output = model.predict_proba(input_df)[0][1]
     
-    # --- THE ROBUST STRING CLEANING FIX ---
-    # Force string, strip all brackets/quotes/spaces, then convert to float
+    # Clean the probability just in case
     clean_prob = re.sub(r"[^\d\.E\-]", "", str(raw_output))
     prob = float(clean_prob)
         
@@ -110,38 +130,13 @@ with col1:
     st.caption("**Strategic Insight:** Threshold is set at 50% for proactive outreach.")
 
 with col2:
-    st.subheader("Why this prediction? v2 (SHAP)")
+    st.subheader("Why this prediction? (SHAP)")
     
-    # --- THE INTERNAL CONFIGURATION FIX ---
-    import json
-    import re
-    
-    # 1. Extract the raw XGBoost booster from the scikit-learn wrapper
-    booster = model.get_booster()
-    
-    # 2. Download the model's internal configuration as JSON
-    config = json.loads(booster.save_config())
-    
-    # 3. Locate the corrupted base_score and strip the brackets
-    bad_base_score = config["learner"]["learner_model_param"]["base_score"]
-    clean_base_score = re.sub(r"[^\d\.E\-]", "", bad_base_score)
-    config["learner"]["learner_model_param"]["base_score"] = clean_base_score
-    
-    # 4. Upload the repaired configuration back into the booster
-    booster.load_config(json.dumps(config))
-    
-    # 5. Safely initialize SHAP with the patched booster
-    explainer = shap.TreeExplainer(booster)
+    # Initialize Explainer (The monkey patch above prevents the crash here!)
+    explainer = shap.TreeExplainer(model)
     shap_values = explainer.shap_values(input_df)
     
-    # 6. Visualize Force Plot (using [0] to ensure 1D array)
+    # Visualize Force Plot
     st_shap(shap.force_plot(explainer.expected_value, shap_values[0], input_df.iloc[0]), height=200)
     
     st.info("**Guide:** Red bars increase churn risk. Blue bars decrease churn risk.")
-
-
-
-
-
-
-
