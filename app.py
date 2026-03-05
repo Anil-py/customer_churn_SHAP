@@ -8,7 +8,7 @@ from streamlit_shap import st_shap
 import re
 
 # --- 1. Page Configuration ---
-st.set_page_config(page_title="Bank Customer Churn Predictor", layout="wide")
+st.set_page_config(page_title="Bank Customer Churn Predictor V2", layout="wide")
 
 # --- 2. Asset Loading ---
 @st.cache_resource
@@ -121,4 +121,5 @@ with col2:
     
 
     st.info("**Guide:** Red bars increase churn risk. Blue bars decrease churn risk.")
+
 
