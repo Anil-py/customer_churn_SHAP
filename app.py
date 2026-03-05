@@ -93,7 +93,7 @@ with col1:
     
     # --- THE ROBUST STRING CLEANING FIX ---
     # Force string, strip all brackets/quotes/spaces, then convert to float
-    clean_prob = str(raw_output).replace('[', '').replace(']', '').replace("'", "").replace('"', "").replace(" ", "")
+    clean_prob = re.sub(r"[^\d\.E\-]", "", str(raw_output))
     prob = float(clean_prob)
         
     prediction = 1 if prob > 0.5 else 0
@@ -118,4 +118,5 @@ with col2:
     # Visualize Force Plot
     st_shap(shap.force_plot(explainer.expected_value, shap_values, input_df), height=200)
     
+
     st.info("**Guide:** Red bars increase churn risk. Blue bars decrease churn risk.")
