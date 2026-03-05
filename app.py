@@ -112,19 +112,33 @@ with col1:
 with col2:
     st.subheader("Why this prediction? (SHAP)")
     
-    # 1. Initialize Explainer
-    explainer = shap.TreeExplainer(model)
+    # --- THE INTERNAL CONFIGURATION FIX ---
+    import json
+    import re
+    
+    # 1. Extract the raw XGBoost booster from the scikit-learn wrapper
+    booster = model.get_booster()
+    
+    # 2. Download the model's internal configuration as JSON
+    config = json.loads(booster.save_config())
+    
+    # 3. Locate the corrupted base_score and strip the brackets
+    bad_base_score = config["learner"]["learner_model_param"]["base_score"]
+    clean_base_score = re.sub(r"[^\d\.E\-]", "", bad_base_score)
+    config["learner"]["learner_model_param"]["base_score"] = clean_base_score
+    
+    # 4. Upload the repaired configuration back into the booster
+    booster.load_config(json.dumps(config))
+    
+    # 5. Safely initialize SHAP with the patched booster
+    explainer = shap.TreeExplainer(booster)
     shap_values = explainer.shap_values(input_df)
     
-    # 2. THE FIX: Force SHAP's expected_value into a clean float
-    raw_expected_value = explainer.expected_value
-    clean_ev = float(re.sub(r"[^\d\.E\-]", "", str(raw_expected_value)))
-    
-    # 3. Generate the Force Plot
-    # Note: We use [0] and .iloc[0] to guarantee we pass a flat 1D array for a single customer
-    st_shap(shap.force_plot(clean_ev, shap_values[0], input_df.iloc[0]), height=200)
+    # 6. Visualize Force Plot (using [0] to ensure 1D array)
+    st_shap(shap.force_plot(explainer.expected_value, shap_values[0], input_df.iloc[0]), height=200)
     
     st.info("**Guide:** Red bars increase churn risk. Blue bars decrease churn risk.")
+
 
 
 
