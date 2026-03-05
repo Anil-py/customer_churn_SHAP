@@ -113,14 +113,15 @@ with col2:
     st.subheader("Why this prediction? (SHAP)")
     
     # SHAP explainer
-    explainer = shap.TreeExplainer(model)
-    shap_values = explainer.shap_values(input_df)
+    #explainer = shap.TreeExplainer(model)
+    #shap_values = explainer.shap_values(input_df)
     
     # Visualize Force Plot
-    st_shap(shap.force_plot(explainer.expected_value, shap_values, input_df), height=200)
+    #st_shap(shap.force_plot(explainer.expected_value, shap_values, input_df), height=200)
     
 
     st.info("**Guide:** Red bars increase churn risk. Blue bars decrease churn risk.")
+
 
 
 
