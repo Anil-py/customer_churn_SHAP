@@ -8,7 +8,7 @@ from streamlit_shap import st_shap
 import re
 
 # --- 1. Page Configuration ---
-st.set_page_config(page_title="Bank Customer Churn Predictor V2", layout="wide")
+st.set_page_config(page_title="Bank Customer Churn Predictor", layout="wide")
 
 # --- 2. Asset Loading ---
 @st.cache_resource
@@ -80,7 +80,7 @@ def user_input_features():
 input_df = user_input_features()
 
 # --- 4. Main UI Layout ---
-st.title("🏦 Bank Customer Churn Predictor")
+st.title("🏦 Bank Customer Churn Predictor v2")
 st.markdown("This tool utilizes an **Optimized XGBoost Classifier** and **SHAP (Explainable AI)** to identify churn risk and the underlying financial drivers.")
 st.divider()
 
@@ -121,5 +121,6 @@ with col2:
     
 
     st.info("**Guide:** Red bars increase churn risk. Blue bars decrease churn risk.")
+
 
 
