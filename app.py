@@ -110,7 +110,7 @@ with col1:
     st.caption("**Strategic Insight:** Threshold is set at 50% for proactive outreach.")
 
 with col2:
-    st.subheader("Why this prediction? (SHAP)")
+    st.subheader("Why this prediction? v2 (SHAP)")
     
     # --- THE INTERNAL CONFIGURATION FIX ---
     import json
@@ -138,6 +138,7 @@ with col2:
     st_shap(shap.force_plot(explainer.expected_value, shap_values[0], input_df.iloc[0]), height=200)
     
     st.info("**Guide:** Red bars increase churn risk. Blue bars decrease churn risk.")
+
 
 
 
