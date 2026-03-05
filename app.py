@@ -77,7 +77,7 @@ col1, col2 = st.columns([1, 2])
 
 with col1:
     st.subheader("Risk Analysis")
-    prob = model.predict_proba(input_df)[0][1]
+    prob = float(model.predict_proba(input_df)[0][1])
     prediction = model.predict(input_df)[0]
     
     if prediction == 1:
@@ -106,4 +106,5 @@ with col2:
     """)
 
 st.divider()
+
 st.markdown("**Note:** This model was optimized for high Recall (0.71) to ensure the majority of at-risk customers are identified.")
