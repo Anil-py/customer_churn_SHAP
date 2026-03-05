@@ -5,6 +5,7 @@ import xgboost as xgb
 import shap
 import joblib
 from streamlit_shap import st_shap
+import re
 
 # --- 1. Page Configuration ---
 st.set_page_config(page_title="Bank Customer Churn Predictor", layout="wide")
@@ -120,3 +121,4 @@ with col2:
     
 
     st.info("**Guide:** Red bars increase churn risk. Blue bars decrease churn risk.")
+
