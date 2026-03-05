@@ -4,33 +4,10 @@ import numpy as np
 import xgboost as xgb
 import shap
 import joblib
-import json
-import re
 from streamlit_shap import st_shap
 
-# --- BUG FIX: INTERCEPTOR FOR XGBOOST/SHAP ---
-# This patches the known compatibility bug between XGBoost 3.0+ and SHAP
-original_save_config = xgb.core.Booster.save_config
-
-def patched_save_config(self, *args, **kwargs):
-    config_str = original_save_config(self, *args, **kwargs)
-    config = json.loads(config_str)
-    
-    # Secretly remove the brackets before SHAP sees them
-    try:
-        bs = config["learner"]["learner_model_param"]["base_score"]
-        if isinstance(bs, str) and "[" in bs:
-            config["learner"]["learner_model_param"]["base_score"] = re.sub(r"[^\d\.E\-]", "", bs)
-    except KeyError:
-        pass
-        
-    return json.dumps(config)
-
-xgb.core.Booster.save_config = patched_save_config
-# ---------------------------------------------
-
 # --- 1. Page Configuration ---
-st.set_page_config(page_title="Bank Customer Churn Predictor V3", layout="wide")
+st.set_page_config(page_title="Bank Customer Churn Predictor V4", layout="wide")
 
 # --- 2. Asset Loading ---
 @st.cache_resource
@@ -101,7 +78,7 @@ def user_input_features():
 input_df = user_input_features()
 
 # --- 4. Main UI Layout ---
-st.title("🏦 Bank Customer Churn Predictor V3")
+st.title("🏦 Bank Customer Churn Predictor V4")
 st.markdown("This tool utilizes an **Optimized XGBoost Classifier** and **SHAP (Explainable AI)** to identify churn risk and the underlying financial drivers.")
 st.divider()
 
@@ -111,6 +88,7 @@ with col1:
     st.subheader("Risk Analysis")
     
     # Predict Probability
+    import re
     raw_output = model.predict_proba(input_df)[0][1]
     
     # Clean the probability just in case
@@ -132,9 +110,41 @@ with col1:
 with col2:
     st.subheader("Why this prediction? (SHAP)")
     
-    # Initialize Explainer (The monkey patch above prevents the crash here!)
+    # --- SHAP / XGBOOST 3.1.0 BUG FIX INTERCEPTOR ---
+    import json
+    import shap.explainers._tree
+    
+    # Save the original JSON parser
+    original_loads = json.loads
+    
+    # Create a custom parser that destroys the brackets on the fly
+    def patched_loads(s, *args, **kwargs):
+        obj = original_loads(s, *args, **kwargs)
+        try:
+            if isinstance(obj, dict) and "learner" in obj:
+                bs = obj["learner"]["learner_model_param"]["base_score"]
+                if isinstance(bs, str) and "[" in bs:
+                    obj["learner"]["learner_model_param"]["base_score"] = re.sub(r"[^\d\.E\-]", "", bs)
+                elif isinstance(bs, list):
+                    obj["learner"]["learner_model_param"]["base_score"] = str(bs[0])
+        except Exception:
+            pass
+        return obj
+    
+    # Hijack Python's JSON parser securely
+    json.loads = patched_loads
+    if hasattr(shap.explainers._tree, 'json'):
+        shap.explainers._tree.json.loads = patched_loads
+    
+    # 1. Initialize Explainer (The interceptor catches the bug here!)
     explainer = shap.TreeExplainer(model)
     shap_values = explainer.shap_values(input_df)
+    
+    # Restore the original JSON parser so the rest of the app is safe
+    json.loads = original_loads
+    if hasattr(shap.explainers._tree, 'json'):
+        shap.explainers._tree.json.loads = original_loads
+    # ------------------------------------------------
     
     # Visualize Force Plot
     st_shap(shap.force_plot(explainer.expected_value, shap_values[0], input_df.iloc[0]), height=200)
