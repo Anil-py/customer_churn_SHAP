@@ -112,15 +112,20 @@ with col1:
 with col2:
     st.subheader("Why this prediction? (SHAP)")
     
-    # SHAP explainer
-    #explainer = shap.TreeExplainer(model)
-    #shap_values = explainer.shap_values(input_df)
+    # 1. Initialize Explainer
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(input_df)
     
-    # Visualize Force Plot
-    #st_shap(shap.force_plot(explainer.expected_value, shap_values, input_df), height=200)
+    # 2. THE FIX: Force SHAP's expected_value into a clean float
+    raw_expected_value = explainer.expected_value
+    clean_ev = float(re.sub(r"[^\d\.E\-]", "", str(raw_expected_value)))
     
-
+    # 3. Generate the Force Plot
+    # Note: We use [0] and .iloc[0] to guarantee we pass a flat 1D array for a single customer
+    st_shap(shap.force_plot(clean_ev, shap_values[0], input_df.iloc[0]), height=200)
+    
     st.info("**Guide:** Red bars increase churn risk. Blue bars decrease churn risk.")
+
 
 
 
