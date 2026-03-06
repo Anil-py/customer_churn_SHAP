@@ -73,7 +73,7 @@ def user_input_features():
 input_df = user_input_features()
 
 # --- 4. Main UI Layout ---
-st.title("🏦 Bank Customer Churn Predictor V5")
+st.title("🏦 Bank Customer Churn Predictor")
 st.markdown("This tool utilizes an **Optimized XGBoost Classifier** and **SHAP (Explainable AI)** to identify churn risk and the underlying financial drivers.")
 st.divider()
 
@@ -107,3 +107,4 @@ with col2:
     st_shap(shap.force_plot(explainer.expected_value, shap_values[0], input_df.iloc[0]), height=200)
     
     st.info("**Guide:** Red bars increase churn risk. Blue bars decrease churn risk.")
+
