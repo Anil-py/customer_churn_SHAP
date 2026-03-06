@@ -1,5 +1,7 @@
 # 🏦 Bank Customer Churn Prediction & Analytics
 
+##  [🔗 View the Live Interactive App Here](https://customerchurnshap-lz7rndkkwo6yypewxwwoep.streamlit.app/)
+
 This repository features an end-to-end Machine Learning solution designed to predict customer attrition (churn) for a retail bank. Utilizing an **Optimized XGBoost Classifier**, the project identifies high-risk customers and employs **Explainable AI (SHAP)** to provide transparent financial drivers behind every prediction.
 
 ---
@@ -55,3 +57,4 @@ The Force Plot breaks down a single prediction into a "tug-of-war" of features. 
 * **Imbalanced Classes:** Addressed data skew by using `scale_pos_weight` in XGBoost to ensure the model focuses effectively on the minority "Exited" class.
 * **Hyperparameter Tuning:** Conducted `RandomizedSearchCV` to optimize tree depth and learning rates, preventing overfitting while maintaining high recall.
 * **Interpretability:** Integrated SHAP to transform the "Black Box" XGBoost model into an explainable tool suitable for financial risk audits.
+
