@@ -7,7 +7,7 @@ import joblib
 from streamlit_shap import st_shap
 
 # --- 1. Page Configuration ---
-st.set_page_config(page_title="Bank Customer Churn Predictor V4", layout="wide")
+st.set_page_config(page_title="Bank Customer Churn Predictor V5", layout="wide")
 
 # --- 2. Asset Loading ---
 @st.cache_resource
@@ -39,10 +39,6 @@ def user_input_features():
     else:  
         geo_germany, geo_spain = 0, 0
 
-    # Map Binary variables
-    is_active_val = 1 if is_active == "Yes" else 0
-    has_card_val = 1 if has_card == "Yes" else 0
-
     # Build the Dictionary WITH SYNTHETIC FEATURES
     data = {
         'CreditScore': credit_score,
@@ -51,15 +47,15 @@ def user_input_features():
         'Tenure': tenure,
         'Balance': balance,
         'NumOfProducts': num_products,
-        'HasCrCard': has_card_val,
-        'IsActiveMember': is_active_val,
+        'HasCrCard': 1 if has_card == "Yes" else 0,
+        'IsActiveMember': 1 if is_active == "Yes" else 0,
         'EstimatedSalary': est_salary,
         'Geography_Germany': geo_germany,
         'Geography_Spain': geo_spain,
         'BalanceSalaryRatio': balance / (est_salary + 1),
         'TenureByAge': tenure / age,
         'CreditScoreByAge': credit_score / age,
-        'EngagementScore': is_active_val + has_card_val + num_products
+        'EngagementScore': (1 if is_active == "Yes" else 0) + (1 if has_card == "Yes" else 0) + num_products
     }
     
     df = pd.DataFrame(data, index=[0])
@@ -74,11 +70,10 @@ def user_input_features():
     
     return df
 
-# Generate the dataframe for prediction
 input_df = user_input_features()
 
 # --- 4. Main UI Layout ---
-st.title("🏦 Bank Customer Churn Predictor V4")
+st.title("🏦 Bank Customer Churn Predictor V5")
 st.markdown("This tool utilizes an **Optimized XGBoost Classifier** and **SHAP (Explainable AI)** to identify churn risk and the underlying financial drivers.")
 st.divider()
 
@@ -87,14 +82,8 @@ col1, col2 = st.columns([1, 2])
 with col1:
     st.subheader("Risk Analysis")
     
-    # Predict Probability
-    import re
-    raw_output = model.predict_proba(input_df)[0][1]
-    
-    # Clean the probability just in case
-    clean_prob = re.sub(r"[^\d\.E\-]", "", str(raw_output))
-    prob = float(clean_prob)
-        
+    # Standard probability prediction (No hacks needed!)
+    prob = float(model.predict_proba(input_df)[0][1])
     prediction = 1 if prob > 0.5 else 0
     
     if prediction == 1:
@@ -110,41 +99,9 @@ with col1:
 with col2:
     st.subheader("Why this prediction? (SHAP)")
     
-    # --- SHAP / XGBOOST 3.1.0 BUG FIX INTERCEPTOR ---
-    import json
-    import shap.explainers._tree
-    
-    # Save the original JSON parser
-    original_loads = json.loads
-    
-    # Create a custom parser that destroys the brackets on the fly
-    def patched_loads(s, *args, **kwargs):
-        obj = original_loads(s, *args, **kwargs)
-        try:
-            if isinstance(obj, dict) and "learner" in obj:
-                bs = obj["learner"]["learner_model_param"]["base_score"]
-                if isinstance(bs, str) and "[" in bs:
-                    obj["learner"]["learner_model_param"]["base_score"] = re.sub(r"[^\d\.E\-]", "", bs)
-                elif isinstance(bs, list):
-                    obj["learner"]["learner_model_param"]["base_score"] = str(bs[0])
-        except Exception:
-            pass
-        return obj
-    
-    # Hijack Python's JSON parser securely
-    json.loads = patched_loads
-    if hasattr(shap.explainers._tree, 'json'):
-        shap.explainers._tree.json.loads = patched_loads
-    
-    # 1. Initialize Explainer (The interceptor catches the bug here!)
+    # Standard SHAP initialization
     explainer = shap.TreeExplainer(model)
     shap_values = explainer.shap_values(input_df)
-    
-    # Restore the original JSON parser so the rest of the app is safe
-    json.loads = original_loads
-    if hasattr(shap.explainers._tree, 'json'):
-        shap.explainers._tree.json.loads = original_loads
-    # ------------------------------------------------
     
     # Visualize Force Plot
     st_shap(shap.force_plot(explainer.expected_value, shap_values[0], input_df.iloc[0]), height=200)
